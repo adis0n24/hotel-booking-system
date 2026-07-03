@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hotel Room Booking System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+</style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+<nav class="bg-blue-600 text-white shadow-lg">
+    <div class="max-w-6xl mx-auto px-4">
+        <div class="flex justify-between">
+            <div class="flex space-x-7">
+                <div class="flex items-center py-4 px-2">
+                    <span class="font-bold text-xl">Grand Hotel System</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="max-w-6xl mx-auto mt-10 px-4 grid grid-cols-1 md:grid-cols-4 gap-6">
+    <div class="md:col-span-1 bg-white rounded-lg shadow p-4 h-fit">
+        <ul class="space-y-2">
+            <li><button onclick="showTab('rooms')" class="w-full text-left px-4 py-2 rounded hover:bg-blue-50 text-blue-700 font-medium transition">🏠 View Rooms</button></li>
+            <li><button onclick="showTab('bookedRooms')" class="w-full text-left px-4 py-2 rounded hover:bg-blue-50 text-gray-700 font-medium transition">🛏️ Booked Rooms</button></li>
+            <li><button onclick="showTab('booking')" class="w-full text-left px-4 py-2 rounded hover:bg-blue-50 text-gray-700 font-medium transition">📅 Make New Booking</button></li>
+            <li><button onclick="showTab('addRoom')" class="w-full text-left px-4 py-2 rounded hover:bg-blue-50 text-gray-700 font-medium transition">➕ Add Room</button></li>
+            <li><button onclick="showTab('cancel')" class="w-full text-left px-4 py-2 rounded hover:bg-blue-50 text-gray-700 font-medium transition">❌ Cancel Booking</button></li>
+            <li><button onclick="showTab('report')" class="w-full text-left px-4 py-2 rounded hover:bg-blue-50 text-gray-700 font-medium transition">📊 Revenue Report</button></li>
+        </ul>
+    </div>
+
+    <div class="md:col-span-3 bg-white rounded-lg shadow p-6">
+
+        <!-- Admin Access Panel -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <p class="text-lg font-semibold text-gray-800">Admin Access</p>
+                    <p class="text-sm text-gray-500">Sign in to manage rooms, bookings, and reports.</p>
+                </div>
+                <div>
+                    <div id="adminLoggedOut">
+                        <form id="adminLoginForm" class="flex flex-col md:flex-row gap-2">
+                            <input type="text" id="adminUsername" class="border rounded px-3 py-2" placeholder="Username" required>
+                            <input type="password" id="adminPassword" class="border rounded px-3 py-2" placeholder="Password" required>
+                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Login</button>
+                        </form>
+                        <p class="text-xs text-gray-500 mt-1">Default credentials: admin / admin123 (change in backend).</p>
+                    </div>
+                    <div id="adminLoggedIn" class="hidden">
+                        <p class="text-sm text-gray-700 mb-2">Signed in as <span id="adminUser" class="font-semibold"></span></p>
+                        <button id="adminLogoutBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">Logout</button>
+                    </div>
+                </div>
+            </div>
+            <div id="adminAuthMessage" class="mt-3 hidden p-3 rounded text-sm"></div>
+        </div>
+
+        <!-- Rooms Section -->
+        <div id="rooms" class="tab-content active">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800 border-b pb-2">Rooms & Availability</h2>
+            <button onclick="fetchRooms()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mb-4">Refresh List</button>
+            <div class="overflow-x-auto">
+                <table class="min-w-full leading-normal">
+                    <thead>
+                        <tr>
+                            <th>Room ID</th>
+                            <th>Type</th>
+                            <th>Floor</th>
+                            <th>Price/Night</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="roomsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Booked Rooms Section -->
+        <div id="bookedRooms" class="tab-content">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800 border-b pb-2">Currently Booked Rooms</h2>
+            <button onclick="fetchBookings()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mb-4">Refresh List</button>
+            <div class="overflow-x-auto">
+                <table class="min-w-full leading-normal">
+                    <thead>
+                        <tr>
+                            <th>Booking ID</th>
+                            <th>Guest</th>
+                            <th>Room</th>
+                            <th>Check-In</th>
+                            <th>Check-Out</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bookedRoomsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Booking Section -->
+        <div id="booking" class="tab-content">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800 border-b pb-2">New Booking</h2>
+            <form id="bookingForm" class="space-y-4 max-w-2xl">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Full Name</label>
+                        <input type="text" id="custName" class="w-full border rounded px-3 py-2" placeholder="e.g. Priya Sharma" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Email</label>
+                        <input type="email" id="custEmail" class="w-full border rounded px-3 py-2" placeholder="name@email.com">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Phone</label>
+                        <input type="tel" id="custPhone" class="w-full border rounded px-3 py-2" placeholder="9876543210" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">ID Proof</label>
+                        <input type="text" id="custIdProof" class="w-full border rounded px-3 py-2" placeholder="AADHAR123456" required>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Select Room</label>
+                        <select id="roomSelect" class="w-full border rounded px-3 py-2" required>
+                            <option value="">Loading rooms...</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">Only currently available rooms are shown.</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Check-In</label>
+                            <input type="date" id="checkIn" class="w-full border rounded px-3 py-2" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Check-Out</label>
+                            <input type="date" id="checkOut" class="w-full border rounded px-3 py-2" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Nights</label>
+                        <input type="number" id="nightCount" class="w-full border rounded px-3 py-2 bg-gray-50" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Price / Night</label>
+                        <input type="text" id="roomPrice" class="w-full border rounded px-3 py-2 bg-gray-50" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Total Amount (₹)</label>
+                        <input type="number" id="totalAmount" class="w-full border rounded px-3 py-2 bg-gray-50" readonly required>
+                    </div>
+                </div>
+
+                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded w-full font-semibold">Confirm Booking</button>
+            </form>
+            <div id="bookingResult" class="mt-4 hidden p-4 rounded"></div>
+        </div>
+
+        <!-- Add Room Section -->
+        <div id="addRoom" class="tab-content">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800 border-b pb-2">Add New Room</h2>
+            <form id="addRoomForm" class="space-y-4 max-w-lg">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Room Number</label>
+                    <input type="text" id="newRoomNumber" class="w-full border rounded px-3 py-2" placeholder="e.g. 401" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Room Type</label>
+                    <select id="newRoomType" class="w-full border rounded px-3 py-2" required>
+                        <option value="">Select type</option>
+                        <option value="Single">Single</option>
+                        <option value="Double">Double</option>
+                        <option value="Deluxe">Deluxe</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Price (₹)</label>
+                    <input type="number" id="newRoomPrice" class="w-full border rounded px-3 py-2" min="0" step="0.01" placeholder="e.g. 3200" required>
+                </div>
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded w-full font-semibold">Add Room</button>
+            </form>
+            <div id="addRoomResult" class="mt-4 hidden p-4 rounded"></div>
+        </div>
+
+        <!-- Cancel Section -->
+        <div id="cancel" class="tab-content">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800 border-b pb-2">Cancel Booking</h2>
+            <div class="max-w-sm">
+                <label>Booking ID</label>
+                <div class="flex gap-2">
+                    <input type="number" id="cancelId" placeholder="Enter Booking ID">
+                    <button onclick="cancelBooking()" class="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded">Cancel</button>
+                </div>
+            </div>
+            <div id="cancelResult" class="mt-4 hidden p-4 rounded"></div>
+        </div>
+
+        <!-- Report Section -->
+        <div id="report" class="tab-content">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800 border-b pb-2">Hotel Performance Report</h2>
+            <div class="flex gap-4 mb-6">
+                <button onclick="fetchReport()" class="bg-purple-600 hover:bg-purple-700 text-white py-2 px-6 rounded font-semibold">Refresh Report</button>
+                <p id="reportStatus" class="text-sm text-gray-500 self-center"></p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="reportCards">
+                <div class="bg-gray-50 border rounded-lg p-4 shadow-sm">
+                    <p class="text-gray-500 text-xs uppercase tracking-wider">Total Bookings</p>
+                    <p id="reportTotalBookings" class="text-3xl font-bold text-gray-900 mt-2">--</p>
+                </div>
+                <div class="bg-gray-50 border rounded-lg p-4 shadow-sm">
+                    <p class="text-gray-500 text-xs uppercase tracking-wider">Total Revenue (₹)</p>
+                    <p id="reportTotalRevenue" class="text-3xl font-bold text-gray-900 mt-2">--</p>
+                </div>
+                <div class="bg-gray-50 border rounded-lg p-4 shadow-sm">
+                    <p class="text-gray-500 text-xs uppercase tracking-wider">Occupancy Rate</p>
+                    <p id="reportOccupancy" class="text-3xl font-bold text-gray-900 mt-2">--%</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                <div class="bg-white border rounded-lg p-4 shadow-sm">
+                    <p class="text-gray-500 text-xs uppercase tracking-wider">Total Rooms</p>
+                    <p id="reportTotalRooms" class="text-2xl font-semibold text-gray-900 mt-2">--</p>
+                </div>
+                <div class="bg-white border rounded-lg p-4 shadow-sm">
+                    <p class="text-gray-500 text-xs uppercase tracking-wider">Currently Booked</p>
+                    <p id="reportBookedRooms" class="text-2xl font-semibold text-gray-900 mt-2">--</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+let cachedRooms = [];
+let isAdmin = false;
+const adminOnlyTabs = new Set(['bookedRooms', 'addRoom', 'cancel', 'report']);
+
+function showTab(tabId) {
+    if (adminOnlyTabs.has(tabId) && !isAdmin) {
+        alert('You must login as admin to access this section.');
+        tabId = 'rooms';
+    }
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    if (tabId === 'rooms') fetchRooms();
+    if (tabId === 'bookedRooms') fetchBookings();
+    if (tabId === 'report') fetchReport();
+}
+
+async function fetchAuthStatus() {
+    try {
+        const response = await fetch('/api/auth/status');
+        const payload = await response.json();
+        isAdmin = !!payload.is_admin;
+        updateAdminUI(payload);
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+function updateAdminUI(payload) {
+    const loggedOut = document.getElementById('adminLoggedOut');
+    const loggedIn = document.getElementById('adminLoggedIn');
+    const adminUser = document.getElementById('adminUser');
+    if (isAdmin) {
+        loggedOut.classList.add('hidden');
+        loggedIn.classList.remove('hidden');
+        adminUser.textContent = payload.username || 'admin';
+        fetchBookings();
+        fetchReport();
+    } else {
+        loggedOut.classList.remove('hidden');
+        loggedIn.classList.add('hidden');
+        adminUser.textContent = '';
+        const bookedTbody = document.getElementById('bookedRoomsTableBody');
+        if (bookedTbody) {
+            bookedTbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-gray-500">Login as admin to view bookings.</td></tr>';
+        }
+        const statusEl = document.getElementById('reportStatus');
+        if (statusEl) {
+            statusEl.textContent = 'Admin login required.';
+            document.getElementById('reportTotalBookings').textContent = '--';
+            document.getElementById('reportTotalRevenue').textContent = '--';
+            document.getElementById('reportOccupancy').textContent = '--%';
+            document.getElementById('reportTotalRooms').textContent = '--';
+            document.getElementById('reportBookedRooms').textContent = '--';
+        }
+    }
+}
+
+document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const messageDiv = document.getElementById('adminAuthMessage');
+    messageDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+    try {
+        const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: document.getElementById('adminUsername').value.trim(),
+                password: document.getElementById('adminPassword').value.trim()
+            })
+        });
+        const result = await response.json();
+        if (result.success) {
+            messageDiv.classList.add('bg-green-100', 'text-green-700');
+            messageDiv.textContent = result.message;
+            document.getElementById('adminLoginForm').reset();
+            await fetchAuthStatus();
+            fetchRooms();
+        } else {
+            messageDiv.classList.add('bg-red-100', 'text-red-700');
+            messageDiv.textContent = result.error || 'Login failed.';
+        }
+    } catch (err) {
+        console.error(err);
+        messageDiv.classList.add('bg-red-100', 'text-red-700');
+        messageDiv.textContent = 'Unexpected error during login.';
+    }
+});
+
+document.getElementById('adminLogoutBtn').addEventListener('click', async () => {
+    const messageDiv = document.getElementById('adminAuthMessage');
+    messageDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+    try {
+        const response = await fetch('/api/auth/logout', { method: 'POST' });
+        const result = await response.json();
+        if (result.success) {
+            messageDiv.classList.add('bg-green-100', 'text-green-700');
+            messageDiv.textContent = result.message || 'Logged out.';
+            await fetchAuthStatus();
+        } else {
+            messageDiv.classList.add('bg-red-100', 'text-red-700');
+            messageDiv.textContent = result.error || 'Logout failed.';
+        }
+    } catch (err) {
+        console.error(err);
+        messageDiv.classList.add('bg-red-100', 'text-red-700');
+        messageDiv.textContent = 'Unexpected error during logout.';
+    }
+});
+
+async function fetchRooms() {
+    const tbody = document.getElementById('roomsTableBody');
+    tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-gray-500">Loading rooms...</td></tr>';
+    try {
+        const response = await fetch('/api/rooms');
+        const payload = await response.json();
+        if (!payload.success) throw new Error(payload.error || 'Unable to load rooms');
+
+        cachedRooms = payload.rooms || [];
+        if (!cachedRooms.length) {
+            tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-gray-500">No rooms found.</td></tr>';
+            populateRoomDropdown();
+            return;
+        }
+
+        tbody.innerHTML = '';
+        cachedRooms.forEach(room => {
+            const statusClass = room.availability === 'Available'
+                ? 'bg-green-100 text-green-700'
+                : 'bg-yellow-100 text-yellow-700';
+            tbody.innerHTML += `
+                <tr>
+                    <td class="px-5 py-3 border-b">${room.room_number}</td>
+                    <td class="px-5 py-3 border-b">${room.room_type}</td>
+                    <td class="px-5 py-3 border-b">₹${Number(room.price).toFixed(2)}</td>
+                    <td class="px-5 py-3 border-b">${room.availability}</td>
+                    <td class="px-5 py-3 border-b">
+                        <span class="${statusClass} px-2 py-1 rounded text-xs font-semibold">${room.availability}</span>
+                    </td>
+                </tr>`;
+        });
+
+        populateRoomDropdown();
+    } catch (err) {
+        console.error(err);
+        tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-red-600">Failed to load rooms: ${err.message}</td></tr>`;
+    }
+}
+
+async function fetchBookings() {
+    const tbody = document.getElementById('bookedRoomsTableBody');
+    if (!tbody) return;
+    if (!isAdmin) {
+        tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-gray-500">Admin login required to view bookings.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-gray-500">Loading bookings...</td></tr>';
+    try {
+        const response = await fetch('/api/bookings');
+        const payload = await response.json();
+        if (!payload.success) throw new Error(payload.error || 'Unable to load bookings');
+
+        const bookings = payload.bookings || [];
+        if (!bookings.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-gray-500">No bookings found.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = '';
+        bookings.forEach(booking => {
+            tbody.innerHTML += `
+                <tr>
+                    <td class="px-5 py-3 border-b">${booking.booking_id}</td>
+                    <td class="px-5 py-3 border-b">
+                        <div class="font-semibold">${booking.name}</div>
+                        <div class="text-xs text-gray-500">${booking.phone || ''}</div>
+                    </td>
+                    <td class="px-5 py-3 border-b">${booking.room_number} (${booking.room_type})</td>
+                    <td class="px-5 py-3 border-b">${booking.check_in}</td>
+                    <td class="px-5 py-3 border-b">${booking.check_out}</td>
+                    <td class="px-5 py-3 border-b">
+                        <span class="px-2 py-1 rounded text-xs font-semibold ${booking.status === 'Confirmed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+                            ${booking.status}
+                        </span>
+                    </td>
+                </tr>`;
+        });
+    } catch (err) {
+        console.error(err);
+        tbody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-red-600">Failed to load bookings: ${err.message}</td></tr>`;
+    }
+}
+
+function populateRoomDropdown() {
+    const select = document.getElementById('roomSelect');
+    if (!select) return;
+    const availableRooms = cachedRooms.filter(room => room.availability === 'Available');
+
+    if (!availableRooms.length) {
+        select.innerHTML = '<option value="">No rooms currently available</option>';
+        return;
+    }
+
+    select.innerHTML = '<option value="">Select an available room</option>';
+    availableRooms.forEach(room => {
+        select.innerHTML += `<option value="${room.room_id}" data-price="${room.price}">
+            ${room.room_number} • ${room.room_type} • ₹${Number(room.price).toFixed(2)}
+        </option>`;
+    });
+}
+
+function calculateTotalAmount() {
+    const select = document.getElementById('roomSelect');
+    const checkIn = document.getElementById('checkIn').value;
+    const checkOut = document.getElementById('checkOut').value;
+    const nightInput = document.getElementById('nightCount');
+    const roomPriceInput = document.getElementById('roomPrice');
+    const totalAmountInput = document.getElementById('totalAmount');
+
+    const selectedOption = select.options[select.selectedIndex];
+    const pricePerNight = selectedOption ? Number(selectedOption.dataset.price || 0) : 0;
+    roomPriceInput.value = pricePerNight ? `₹${pricePerNight.toFixed(2)}` : '';
+
+    if (!checkIn || !checkOut) {
+        nightInput.value = '';
+        totalAmountInput.value = '';
+        return;
+    }
+
+    const start = new Date(checkIn);
+    const end = new Date(checkOut);
+    const diffMs = end - start;
+    const nights = diffMs > 0 ? Math.ceil(diffMs / (1000 * 60 * 60 * 24)) : 0;
+    nightInput.value = nights || '';
+
+    if (nights && pricePerNight) {
+        totalAmountInput.value = (nights * pricePerNight).toFixed(2);
+    } else {
+        totalAmountInput.value = '';
+    }
+}
+
+document.getElementById('roomSelect').addEventListener('change', calculateTotalAmount);
+document.getElementById('checkIn').addEventListener('change', calculateTotalAmount);
+document.getElementById('checkOut').addEventListener('change', calculateTotalAmount);
+
+document.getElementById('bookingForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+        name: document.getElementById('custName').value.trim(),
+        email: document.getElementById('custEmail').value.trim(),
+        phone: document.getElementById('custPhone').value.trim(),
+        id_proof: document.getElementById('custIdProof').value.trim(),
+        room_id: document.getElementById('roomSelect').value,
+        check_in: document.getElementById('checkIn').value,
+        check_out: document.getElementById('checkOut').value,
+        total_amount: document.getElementById('totalAmount').value || 0
+    };
+
+    const resultDiv = document.getElementById('bookingResult');
+    resultDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+
+    try {
+        const response = await fetch('/api/bookings/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            resultDiv.classList.add('bg-green-100', 'text-green-700');
+            resultDiv.textContent = result.message || 'Booking confirmed successfully!';
+            document.getElementById('bookingForm').reset();
+            document.getElementById('nightCount').value = '';
+            document.getElementById('roomPrice').value = '';
+            document.getElementById('totalAmount').value = '';
+            fetchRooms();
+        } else {
+            resultDiv.classList.add('bg-red-100', 'text-red-700');
+            resultDiv.textContent = result.error || result.message || 'Unable to create booking.';
+        }
+    } catch (err) {
+        console.error(err);
+        resultDiv.classList.add('bg-red-100', 'text-red-700');
+        resultDiv.textContent = 'Unexpected error while creating booking.';
+    }
+});
+
+document.getElementById('addRoomForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!isAdmin) {
+        const resultDiv = document.getElementById('addRoomResult');
+        resultDiv.classList.remove('hidden');
+        resultDiv.classList.add('bg-red-100', 'text-red-700');
+        resultDiv.textContent = 'Admin login required to add rooms.';
+        return;
+    }
+    const payload = {
+        room_number: document.getElementById('newRoomNumber').value.trim(),
+        room_type: document.getElementById('newRoomType').value,
+        price: document.getElementById('newRoomPrice').value
+    };
+
+    const resultDiv = document.getElementById('addRoomResult');
+    resultDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+
+    try {
+        const response = await fetch('/api/rooms/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            resultDiv.classList.add('bg-green-100', 'text-green-700');
+            resultDiv.textContent = result.message || 'Room added successfully.';
+            document.getElementById('addRoomForm').reset();
+            fetchRooms();
+        } else {
+            resultDiv.classList.add('bg-red-100', 'text-red-700');
+            resultDiv.textContent = result.error || result.message || 'Unable to add room.';
+        }
+    } catch (err) {
+        console.error(err);
+        resultDiv.classList.add('bg-red-100', 'text-red-700');
+        resultDiv.textContent = 'Unexpected error while adding room.';
+    }
+});
+
+async function cancelBooking() {
+    const id = document.getElementById('cancelId').value;
+    if (!id) return;
+    if (!isAdmin) {
+        const resultDiv = document.getElementById('cancelResult');
+        resultDiv.classList.remove('hidden');
+        resultDiv.classList.add('bg-red-100', 'text-red-700');
+        resultDiv.textContent = 'Admin login required to cancel bookings.';
+        return;
+    }
+
+    const resultDiv = document.getElementById('cancelResult');
+    resultDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+
+    try {
+        const response = await fetch(`/api/bookings/cancel/${id}`, { method: 'PUT' });
+        const result = await response.json();
+
+        if (result.success) {
+            resultDiv.classList.add('bg-green-100', 'text-green-700');
+            resultDiv.textContent = result.message || 'Booking cancelled successfully.';
+            fetchRooms();
+        } else {
+            resultDiv.classList.add('bg-red-100', 'text-red-700');
+            resultDiv.textContent = result.error || result.message || 'Unable to cancel booking.';
+        }
+    } catch (err) {
+        console.error(err);
+        resultDiv.classList.add('bg-red-100', 'text-red-700');
+        resultDiv.textContent = 'Unexpected error while cancelling booking.';
+    }
+}
+
+async function fetchReport() {
+    const statusEl = document.getElementById('reportStatus');
+    if (!isAdmin) {
+        statusEl.textContent = 'Admin login required.';
+        document.getElementById('reportTotalBookings').textContent = '--';
+        document.getElementById('reportTotalRevenue').textContent = '--';
+        document.getElementById('reportOccupancy').textContent = '--%';
+        document.getElementById('reportTotalRooms').textContent = '--';
+        document.getElementById('reportBookedRooms').textContent = '--';
+        return;
+    }
+    statusEl.textContent = 'Loading latest metrics...';
+    try {
+        const response = await fetch('/api/reports');
+        const payload = await response.json();
+        if (!payload.success) throw new Error(payload.error || 'Failed to load report');
+
+        const report = payload.report || {};
+        document.getElementById('reportTotalBookings').textContent = report.total_bookings ?? '--';
+        document.getElementById('reportTotalRevenue').textContent = report.total_revenue ? `₹${report.total_revenue.toFixed(2)}` : '₹0.00';
+        document.getElementById('reportOccupancy').textContent = `${report.occupancy_rate ?? 0}%`;
+        document.getElementById('reportTotalRooms').textContent = report.total_rooms ?? '--';
+        document.getElementById('reportBookedRooms').textContent = report.booked_rooms ?? '--';
+        statusEl.textContent = `Last updated ${new Date().toLocaleTimeString()}`;
+    } catch (err) {
+        console.error(err);
+        statusEl.textContent = `Report failed: ${err.message}`;
+    }
+}
+
+fetchRooms();
+fetchAuthStatus().then(() => {
+    if (isAdmin) {
+        fetchBookings();
+        fetchReport();
+    }
+});
+</script>
+</body>
+</html>
